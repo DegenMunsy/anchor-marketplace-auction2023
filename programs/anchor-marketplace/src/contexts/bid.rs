@@ -1,9 +1,9 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 use anchor_spl::{token::{Mint, TokenAccount, Token, Transfer as SplTransfer, transfer as spl_transfer, CloseAccount, close_account}, associated_token::AssociatedToken};
-use crate::{state::Marketplace, state::Whitelist, state::Listing};
+use crate::{state::Marketplace, state::Whitelist, state::Listing, refund::Refund};
 
 #[derive(Accounts)]
-pub struct Purchase<'info> {
+pub struct Bid<'info> {
     #[account(mut)]
     taker: Signer<'info>,
     #[account(mut)]
@@ -55,7 +55,7 @@ pub struct Purchase<'info> {
     system_program: Program<'info, System>
 }
 
-impl<'info> Purchase<'info> {
+impl<'info> Bid<'info> {
     pub fn send_sol(&self) -> Result<()> {
         let accounts = Transfer {
             from: self.taker.to_account_info(),

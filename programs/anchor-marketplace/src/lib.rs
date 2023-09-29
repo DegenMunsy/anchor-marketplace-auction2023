@@ -36,4 +36,9 @@ pub mod anchor_marketplace {
         ctx.accounts.send_nft()?;
         ctx.accounts.close_mint_ata()
     }
+
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        ctx.accounts.empty_vault()?;
+        ctx.accounts.close_vault()
+    }
 }

@@ -59,16 +59,19 @@ pub struct List<'info> {
 }
 
 impl<'info> List<'info> {
-    pub fn create_listing(&mut self, bumps: &BTreeMap<String, u8>, price: u64) -> Result<()> {
+    pub fn create_listing(&mut self, bumps: &BTreeMap<String, u8>, reserve: u64) -> Result<()> {
         validate_nft!(
             self.metadata.collection, 
             self.collection_mint
         );
         self.listing.maker = self.maker.key();
         self.listing.mint = self.maker_mint.key();
-        self.listing.price = price;
+        self.listing.reserve_price = reserve_price;
+        self.listing.highest_bid = 0;
+        self.listing.highest_bidder = self.maker.key();
         self.listing.bump = *bumps.get("listing").ok_or(MarketplaceError::BumpError)?;
         self.listing.auth_bump = *bumps.get("vault").ok_or(MarketplaceError::BumpError)?;
+        self.listing.expiry = Clock::get()?.unix_timestamp + 86400000 * 3;
         Ok(())
     }
 

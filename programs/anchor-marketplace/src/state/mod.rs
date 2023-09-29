@@ -24,13 +24,22 @@ impl Whitelist {
     pub const LEN: usize = 8 + 1;
 }
 
+// added expiry, highest_bid, Highest_bidder, reserve_price
 #[account]
 pub struct Listing {
     pub maker: Pubkey,
     pub mint: Pubkey,
-    pub price: u64,
+    pub reserve_price: u64,
     pub bump: u8,
-    pub auth_bump: u8
+    pub auth_bump: u8,
+    pub expiry: i64,
+    pub highest_bid: u64,
+    pub highest_bidder: Pubkey,
+}
+
+#[account]
+pub struct Refund {
+    
 }
 
 impl Listing {
