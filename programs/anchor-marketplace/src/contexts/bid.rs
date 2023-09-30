@@ -56,6 +56,8 @@ pub struct Bid<'info> {
 }
 
 impl<'info> Bid<'info> {
+    // add check to make sure it's greater than highest bid and time isn't expired
+    // add function to add 10 minutes to the auction after a new highest bid
     pub fn send_sol(&self) -> Result<()> {
         let accounts = Transfer {
             from: self.taker.to_account_info(),

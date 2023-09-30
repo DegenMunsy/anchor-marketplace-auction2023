@@ -43,30 +43,53 @@ pub struct Delist<'info> {
     token_program: Program<'info, Token>,
     system_program: Program<'info, System>
 }
+// add logic to check if highest bidder is above reserve price and time is expired
+// pass in creator's address to reclaim the nft
+// delisting refund highest bidder and send nft to the lister
 
 impl<'info> Delist<'info> {
     pub fn withdraw_nft(&self) -> Result<()> {
-
         let current_time = Clock::get()?.unix_timestamp;
-        if current_time > self.listing.expiry {
-            return Err(MarketplaceError::ListingExpired.into());
+        
+        if current_time < self.listing.expiry {
+            return Err(MarketplaceError::ListingNotExpired.into());
         }
 
+        // Check if highest bid is below the reserve price and send nft back to maker_ata or send nft to highest bidder
+        let to;
+        if self.listing.highest_bid < self.listing.reserve_price {
+            to = self.maker_ata;  
+        } else {
+            to = self.listing.highest_bidder; 
+            // Refund the highest bidder
+            let refund_accounts = SplTransfer {
+                from: self.vault.to_account_info(),
+                to: self.listing.highest_bidder.to_account_info(),
+                authority: self.vault.to_account_info()
+            };
+            let refund_ctx = CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                refund_accounts,
+                &signer_seeds // maybe just seeds?
+            );
+            spl_transfer(refund_ctx, self.listing.highest_bid)?;
+        }
+
+        // Transfer NFT
         let accounts = SplTransfer {
             from: self.vault.to_account_info(),
-            to: self.maker_ata.to_account_info(),
+            to: to.to_account_info(),
             authority: self.vault.to_account_info()
         };
 
         let seeds = [b"auth", &self.maker_mint.key().to_bytes()[..], &[self.listing.auth_bump]];
         let signer_seeds = &[&seeds[..]][..];
-
         let ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             accounts,
             &signer_seeds
         );
-
+        
         spl_transfer(ctx, 1)
     }
 }

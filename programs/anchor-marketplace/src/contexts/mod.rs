@@ -15,3 +15,6 @@ pub use bid::*;
 
 pub mod refund;
 pub use refund::*;
+
+pub mod claim;
+pub use claim::*;
