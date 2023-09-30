@@ -31,7 +31,7 @@ pub mod anchor_marketplace {
         ctx.accounts.withdraw_nft()
     }
 
-    pub fn purchase(ctx: Context<Purchase>) -> Result<()> {
+    pub fn bid(ctx: Context<Bid>) -> Result<()> {
         ctx.accounts.send_sol()?;
         ctx.accounts.send_nft()?;
         ctx.accounts.close_mint_ata()

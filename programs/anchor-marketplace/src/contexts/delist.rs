@@ -46,6 +46,12 @@ pub struct Delist<'info> {
 
 impl<'info> Delist<'info> {
     pub fn withdraw_nft(&self) -> Result<()> {
+
+        let current_time = Clock::get()?.unix_timestamp;
+        if current_time > self.listing.expiry {
+            return Err(MarketplaceError::ListingExpired.into());
+        }
+
         let accounts = SplTransfer {
             from: self.vault.to_account_info(),
             to: self.maker_ata.to_account_info(),
