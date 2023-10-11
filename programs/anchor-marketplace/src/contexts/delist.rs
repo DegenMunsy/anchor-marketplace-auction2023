@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{token::{Mint, TokenAccount, Token, Transfer as SplTransfer, transfer as spl_transfer}, associated_token::AssociatedToken};
-use crate::{state::Marketplace, state::Whitelist, state::Listing};
+use crate::{state::Marketplace, state::Whitelist, state::Listing, errors::MarketplaceError};
 
 #[derive(Accounts)]
 pub struct Delist<'info> {
