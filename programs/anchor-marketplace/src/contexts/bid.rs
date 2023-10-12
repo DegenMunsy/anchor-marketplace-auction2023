@@ -1,13 +1,13 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 use anchor_spl::{token::{Mint, TokenAccount, Token, Transfer as SplTransfer, transfer as spl_transfer, CloseAccount, close_account}, associated_token::AssociatedToken};
-use crate::{state::Marketplace, state::Whitelist, state::Listing, refund::Refund};
+use crate::{state::Marketplace, state::Whitelist, state::Listing};
 
 #[derive(Accounts)]
 pub struct Bid<'info> {
     #[account(mut)]
     taker: Signer<'info>,
+    /// CHECK: This is the maker's vault, not the taker's vault.
     #[account(mut)]
-    /// CHECK: This is safe
     maker: UncheckedAccount<'info>,
     #[account(
         seeds = [b"marketplace", marketplace.name.as_str().as_bytes()],
@@ -33,7 +33,6 @@ pub struct Bid<'info> {
         seeds = [b"treasury", marketplace.key().as_ref()],
         bump = marketplace.treasury_bump
     )]
-    
     treasury: SystemAccount<'info>,
     maker_mint: Account<'info, Mint>,
     collection_mint: Account<'info, Mint>,
@@ -56,9 +55,9 @@ pub struct Bid<'info> {
 }
 
 impl<'info> Bid<'info> {
-    // add check to make sure it's greater than highest bid and time isn't expired
-    // add function to add 10 minutes to the auction after a new highest bid
     pub fn send_sol(&self) -> Result<()> {
+        let amount_to_transfer = self.listing.reserve_price; 
+
         let accounts = Transfer {
             from: self.taker.to_account_info(),
             to: self.maker.to_account_info()
@@ -67,7 +66,7 @@ impl<'info> Bid<'info> {
             self.system_program.to_account_info(), 
             accounts
         );
-        transfer(ctx, self.listing.price)
+        transfer(ctx, amount_to_transfer)
     }
 
     pub fn send_nft(&self) -> Result<()> {
@@ -107,5 +106,4 @@ impl<'info> Bid<'info> {
 
         close_account(ctx)
     }
-
 }

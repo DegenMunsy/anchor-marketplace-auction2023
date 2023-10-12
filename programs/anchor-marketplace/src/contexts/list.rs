@@ -59,7 +59,7 @@ pub struct List<'info> {
 }
 
 impl<'info> List<'info> {
-    pub fn create_listing(&mut self, bumps: &BTreeMap<String, u8>, reserve: u64) -> Result<()> {
+    pub fn create_listing(&mut self, bumps: &BTreeMap<String, u8>, reserve_price: u64) -> Result<()> {
         validate_nft!(
             self.metadata.collection, 
             self.collection_mint

@@ -39,57 +39,78 @@ pub struct Delist<'info> {
         bump = listing.bump
     )]
     listing: Account<'info, Listing>,
+    #[account(
+        constraint = highest_bidder_ata.key() == listing.highest_bidder
+    )]
+    highest_bidder_ata: Account<'info, TokenAccount>,
     associated_token_program: Program<'info, AssociatedToken>,
     token_program: Program<'info, Token>,
     system_program: Program<'info, System>
 }
-// add logic to check if highest bidder is above reserve price and time is expired
-// pass in creator's address to reclaim the nft
-// delisting refund highest bidder and send nft to the lister
 
 impl<'info> Delist<'info> {
     pub fn withdraw_nft(&self) -> Result<()> {
         let current_time = Clock::get()?.unix_timestamp;
-        
+
         if current_time < self.listing.expiry {
             return Err(MarketplaceError::ListingNotExpired.into());
         }
 
-        // Check if highest bid is below the reserve price and send nft back to maker_ata or send nft to highest bidder
-        let to;
+        // Prepare the seeds for signing.
+        let seeds = [b"auth", &self.maker_mint.key().to_bytes()[..], &[self.listing.auth_bump]];
+        let signer_seeds = &[&seeds[..]][..];
+
+        // Define local variables to hold AccountInfo values.
+        let maker_account_info = self.maker_ata.to_account_info();
+
         if self.listing.highest_bid < self.listing.reserve_price {
-            to = self.maker_ata;  
+            // Transfer NFT directly to maker
+            let accounts = SplTransfer {
+                from: self.vault.to_account_info(),
+                to: maker_account_info,
+                authority: self.vault.to_account_info()
+            };
+
+            let ctx = CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                accounts,
+                &signer_seeds
+            );
+            
+            spl_transfer(ctx, 1)?;
         } else {
-            to = self.listing.highest_bidder; 
-            // Refund the highest bidder
+            // First use of bidder_account_info for refunding the highest bidder
+            let bidder_account_info = self.highest_bidder_ata.to_account_info();
             let refund_accounts = SplTransfer {
                 from: self.vault.to_account_info(),
-                to: self.listing.highest_bidder.to_account_info(),
+                to: bidder_account_info,
                 authority: self.vault.to_account_info()
             };
             let refund_ctx = CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 refund_accounts,
-                &signer_seeds // maybe just seeds?
+                &signer_seeds
             );
             spl_transfer(refund_ctx, self.listing.highest_bid)?;
+
+            // Re-create bidder_account_info for the second use
+            let bidder_account_info = self.highest_bidder_ata.to_account_info();
+            // Transfer NFT to highest bidder
+            let accounts = SplTransfer {
+                from: self.vault.to_account_info(),
+                to: bidder_account_info,
+                authority: self.vault.to_account_info()
+            };
+
+            let ctx = CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                accounts,
+                &signer_seeds
+            );
+            
+            spl_transfer(ctx, 1)?;
         }
 
-        // Transfer NFT
-        let accounts = SplTransfer {
-            from: self.vault.to_account_info(),
-            to: to.to_account_info(),
-            authority: self.vault.to_account_info()
-        };
-
-        let seeds = [b"auth", &self.maker_mint.key().to_bytes()[..], &[self.listing.auth_bump]];
-        let signer_seeds = &[&seeds[..]][..];
-        let ctx = CpiContext::new_with_signer(
-            self.token_program.to_account_info(),
-            accounts,
-            &signer_seeds
-        );
-        
-        spl_transfer(ctx, 1)
+        Ok(())
     }
 }
